@@ -6,7 +6,7 @@ from sklearn import preprocessing, model_selection
 
 
 
-def get_data(K, onehot_classes, drop_columns):
+def get_data(K, onehot_classes, drop_columns, target):
 
     filename = '../data/flag_data'
     df = pd.read_csv(filename, 
@@ -30,7 +30,7 @@ def get_data(K, onehot_classes, drop_columns):
     #print(data.columns)
 
     data = data.values
-    target = df["colours"].values
+    target = df[target].values
 
 
     N, M = data.shape
