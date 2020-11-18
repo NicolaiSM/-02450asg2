@@ -19,13 +19,6 @@ def get_data(K, onehot_classes, drop_columns, target):
         onehotdf = pd.get_dummies(df[c], prefix=c)
         df = df.merge(onehotdf, left_index=True, right_index=True)
 
-    #target10 = np.unique(df["religion"].values)
-    #target100 = ["religion_" + str(t) for t in target10]
-
-
-    #target2 = df["religion"].values
-
-    target2 = df["religion"].values
     data = df.drop(columns=drop_columns)
     #print(data.columns)
 
@@ -43,4 +36,91 @@ def get_data(K, onehot_classes, drop_columns, target):
     classNames =sorted(set(target2))
 
     CV = model_selection.KFold(n_splits=K,shuffle=True)
-    return data, target, target2, N, M, attributeNames, classNames, CV
+
+    data_train = []
+    target_train = []
+    data_test = []
+    target_test =  []
+
+    data_train_outer = []
+    target_train_outer = []
+    data_test_outer = []
+    target_test_outer =  []
+
+
+    for train_index, test_index in CV.split(data, target):
+
+        n_data_train = data[train_index]
+        n_target_train = target[train_index]
+        n_data_test = data[test_index]
+        n_target_test = target[test_index]
+
+        
+        data_train.append(n_data_train)
+        target_train.append(n_target_train)
+        data_test.append(n_data_test)
+        target_test.append(n_target_test)
+        
+
+        n_data_train_outer_list = []
+        n_target_train_outer_list = []
+        n_data_test_outer_list = []
+        n_target_test_outer_list =  []
+        
+
+
+        for train_index_outer, test_index_outer in CV.split(n_data_train, n_target_train):
+
+            n_data_train_outer_list.append(data[train_index_outer])
+            n_target_train_outer_list.append(target[train_index_outer])
+            n_data_test_outer_list.append(data[test_index_outer])
+            n_target_test_outer_list.append(target[test_index_outer])
+        
+
+        data_train_outer.append(n_data_train_outer_list)
+        target_train_outer.append(n_target_train_outer_list)
+        data_test_outer.append(n_data_test_outer_list)
+        target_test_outer.append(n_target_test_outer_list)
+
+    return data, target, N, M, attributeNames, data_train, target_train, data_test, target_test, data_train_outer, target_train_outer, data_test_outer, target_test_outer
+
+
+"""
+K=10
+
+target = "colours"
+
+drop_columns = ["name", "mainhue", "topleft", "botright", "landmass", "zone", "language", "religion", "colours", "red", "green", "blue", "gold", "white", "black", "orange"]
+
+onehot_classes = ["landmass", "zone", "language", "religion"]
+
+data, target, N, M, attributeNames, CV, data_train, target_train, data_test, target_test, data_train_outer, target_train_outer, data_test_outer, target_test_outer = get_data(K, onehot_classes, drop_columns, target)
+
+
+print(np.array(data_train, dtype=object).shape)
+print(np.array(target_train, dtype=object).shape)
+print(np.array(data_test, dtype=object).shape)
+print(np.array(target_test, dtype=object).shape)
+print(np.array(data_train_outer, dtype=object).shape)
+print(np.array(target_train_outer, dtype=object).shape)
+print(np.array(data_test_outer, dtype=object).shape)
+print(np.array(target_test_outer, dtype=object).shape)
+
+print(np.array(data_train, dtype=object))
+print(10*"-")
+print(np.array(target_train, dtype=object))
+print(10*"-")
+print(np.array(data_test, dtype=object))
+print(10*"-")
+print(np.array(target_test, dtype=object))
+print(10*"-")
+print(np.array(data_train_outer, dtype=object))
+print(10*"-")
+print(np.array(target_train_outer, dtype=object))
+print(10*"-")
+print(np.array(data_test_outer, dtype=object))
+print(10*"-")
+print(np.array(target_test_outer, dtype=object))
+print(10*"-")
+"""
+

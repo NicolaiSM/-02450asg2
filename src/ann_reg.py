@@ -47,12 +47,16 @@ class ANN_trainer:
 
             self.LEARNING_RATE = 0.001
             self.L2_REG = 0.9
-            self.EPOCHS = 150
-            self.BATCH_SIZE = 64
+            self.EPOCHS = 50
+            self.BATCH_SIZE = 32
 
             self.n_hidden = []
             self.error = []
 
+            self.test_predict = []
+            self.test_true = []
+
+            self.train_loss = []
 
     def train(self, train_loader, net, criterion, optimizer):
 
@@ -74,7 +78,7 @@ class ANN_trainer:
 
                 epoch_loss += train_loss.item()
             
-            #train_loss.append(epoch_loss/len(train_loader))
+            #train_loss.append(epoch_loss.numpy()/len(train_loader))
         
         #return train_loss
         
@@ -85,24 +89,27 @@ class ANN_trainer:
 
         with torch.no_grad():
             for X_test_batch, y_test in test_loader:
-                pred = net(X_test_batch).numpy()
+                pred = net(X_test_batch).numpy()[0][0]
                 pred_list.append(pred)
-                y_test_list.append(y_test.numpy())
+                y_test_list.append(y_test.numpy()[0])
 
-        return np.power(np.array(pred_list)-np.array(y_test_list),2).sum().astype(float)/np.array(y_test_list).shape[0]
+        return np.power(np.array(pred_list)-np.array(y_test_list),2).sum().astype(float)/np.array(y_test_list).shape[0], pred_list, y_test_list
 
 
-    def innerrun(self, CV, X, y, M, n_hiddens):
+    def innerrun(self, M, n_hiddens, data_train_outer, target_train_outer, data_test_outer, target_test_outer):
 
         best_hidden = 0
         error = None
 
-        for train_index, test_index in CV.split(X,y):
+        for index in range(len(data_train_outer)):
 
-                X_train = X[train_index]
-                y_train = y[train_index]
-                X_test = X[test_index]
-                y_test =y[test_index]
+
+
+                X_train = data_train_outer[index]
+                y_train = target_train_outer[index]
+                X_test = data_test_outer[index]
+                y_test = target_test_outer[index]
+
 
                 train_dataset = MyDataset(torch.from_numpy(X_train).float(), torch.from_numpy(y_train).float())
                 test_dataset = MyDataset(torch.from_numpy(X_test).float(), torch.from_numpy(y_test).float())
@@ -114,32 +121,33 @@ class ANN_trainer:
 
                 for n_hidden in n_hiddens:
 
+                    for i in range(5):
 
-                    net = Net(M, n_hidden, 1)
+                        net = Net(M, n_hidden, 1)
 
-                    optimizer = optim.SGD(net.parameters(), lr=self.LEARNING_RATE, weight_decay=self.L2_REG)
+                        optimizer = optim.SGD(net.parameters(), lr=self.LEARNING_RATE, weight_decay=self.L2_REG)
 
-                    criterion = nn.MSELoss()
+                        criterion = nn.MSELoss()
 
-                    self.train(train_loader, net, criterion, optimizer)
+                        self.train(train_loader, net, criterion, optimizer)
 
-                    n_error = self.test(test_loader, net) 
+                        n_error, _, _ = self.test(test_loader, net) 
 
-                    if error == None or (n_error< error):
-                        error = n_error
-                        best_hidden = n_hidden
+                        if error == None or (n_error< error):
+                            error = n_error
+                            best_hidden = n_hidden
         
         return best_hidden, error
 
 
-    def run(self, X, y, M, CV, n_hiddens):
+    def run(self, N, M, attributeNames, n_hiddens, data_train, target_train, data_test, target_test, data_train_outer, target_train_outer, data_test_outer, target_test_outer):
 
-        for train_index, test_index in CV.split(X, y):
+        for index in range(len(data_train)):
 
-            X_train_outer = X[train_index]
-            y_train_outer = y[train_index]
-            X_test_outer = X[test_index]
-            y_test_outer =y[test_index]
+            X_train_outer = data_train[index]
+            y_train_outer = target_train[index]
+            X_test_outer = data_test[index]
+            y_test_outer = target_test[index]
 
 
             train_dataset_outer = MyDataset(torch.from_numpy(X_train_outer).float(), torch.from_numpy(y_train_outer).float())
@@ -148,30 +156,63 @@ class ANN_trainer:
             train_loader_outer = DataLoader(dataset=train_dataset_outer, batch_size=self.BATCH_SIZE, shuffle=True)
             test_loader_outer = DataLoader(dataset=test_dataset_outer, batch_size=1)
 
-            best_n_hidden = self.innerrun(CV, X_train_outer, y_train_outer, M, n_hiddens)
+            best_n_hidden, _ = self.innerrun(M, n_hiddens, data_train_outer[index], target_train_outer[index], data_test_outer[index], target_test_outer[index])
+
+
+            error = None
+            pred = None
+            true = None
+            train_loss = None
+
+            for i in range(5):
                 
-            net = Net(M, best_n_hidden, 1)
+                net = Net(M, best_n_hidden, 1)
 
-            optimizer = optim.SGD(net.parameters(), lr=self.LEARNING_RATE, weight_decay=self.L2_REG)
+                optimizer = optim.SGD(net.parameters(), lr=self.LEARNING_RATE, weight_decay=self.L2_REG)
 
-            criterion = nn.MSELoss()
+                criterion = nn.MSELoss()
 
-            self.train(train_loader_outer, net, criterion, optimizer)
+                n_train_loss = self.train(train_loader_outer, net, criterion, optimizer)
 
-            self.error.append(self.test(test_loader_outer, net))
+                n_error, n_pred, n_true = self.test(test_loader_outer, net)
+
+
+                
+                if error==None or (n_error < error):
+                    error = n_error
+                    pred = n_pred
+                    true = n_true
+                    train_loss = n_train_loss
+            
+
+            self.test_true.append(true)
+            self.test_predict.append(pred)
             self.n_hidden.append(best_n_hidden)
+            self.error.append(error)
+            self.train_loss.append(train_loss)
 
 
+"""
                 
+K=10
+
+target = "colours"
+
+drop_columns = ["name", "mainhue", "topleft", "botright", "landmass", "zone", "language", "religion", "colours", "red", "green", "blue", "gold", "white", "black", "orange"]
+
+onehot_classes = ["landmass", "zone", "language", "religion"]
+
+data, target, N, M, attributeNames, data_train, target_train, data_test, target_test, data_train_outer, target_train_outer, data_test_outer, target_test_outer = get_data(K, onehot_classes, drop_columns, target)
+
+n_hiddens = [1, 5, 10, 20, 40, 80, 160, 320, 640, 1280, 2560]
+ann = ANN_trainer()
+
+ann.run( N, M, attributeNames, n_hiddens, data_train, target_train, data_test, target_test, data_train_outer, target_train_outer, data_test_outer, target_test_outer)
+
+print(ann.n_hidden)
+print(ann.error)
+
 """
-
-Need to implement cross validation
-
-"""
-
-
-
-
 
 
 

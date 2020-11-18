@@ -5,7 +5,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-def rlr_validate(X,y,lambdas,cvf=10):
+def rlr_validate(data_train_outer, target_train_outer, data_test_outer, target_test_outer, lambdas, M, cvf=10):
     ''' Validate regularized linear regression model using 'cvf'-fold cross validation.
         Find the optimal lambda (minimizing validation error) from 'lambdas' list.
         The loss function computed as mean squared error on validation set (MSE).
@@ -27,19 +27,19 @@ def rlr_validate(X,y,lambdas,cvf=10):
         train_err_vs_lambda train error as function of lambda (vector)
         test_err_vs_lambda  test error as function of lambda (vector)
     '''
-    CV = model_selection.KFold(cvf, shuffle=True)
-    M = X.shape[1]
+
     w = np.empty((M,cvf,len(lambdas)))
     train_error = np.empty((cvf,len(lambdas)))
     test_error = np.empty((cvf,len(lambdas)))
     f = 0
-    y = y.squeeze()
-    for train_index, test_index in CV.split(X,y):
-        X_train = X[train_index]
-        y_train = y[train_index]
-        X_test = X[test_index]
-        y_test = y[test_index]
-        
+    
+    for index in range(len(data_train_outer)):
+
+        X_train = data_train_outer[index]
+        y_train = target_train_outer[index]
+        X_test = data_test_outer[index]
+        y_test = target_test_outer[index]
+    
         # precompute terms
         Xty = X_train.T @ y_train
         XtX = X_train.T @ X_train
@@ -64,18 +64,44 @@ def rlr_validate(X,y,lambdas,cvf=10):
     return opt_val_err, opt_lambda, mean_w_vs_lambda, train_err_vs_lambda, test_err_vs_lambda
     
 
-def linearmodel(X, y, N, M, attributeNames, CV, lambdas):
-    for train_index, test_index in CV.split(X, y):
-    
-        # extract training and test set for current CV fold
-        X_train = X[train_index]
-        y_train = y[train_index]
-        X_test = X[test_index]
-        y_test = y[test_index]
-        internal_cross_validation = 10  
+def linearmodel(N, M, attributeNames, lambdas, data_train, target_train, data_test, target_test, data_train_outer, target_train_outer, data_test_outer, target_test_outer, K):
+
+    MSE_Error_train = np.empty((K,1))
+    MSE_Error_test = np.empty((K,1))
+    MSE_Error_train_rlr = np.empty((K,1))
+    MSE_Error_test_rlr = np.empty((K,1))
+    MSE_Error_train_nofeatures = np.empty((K,1))
+    MSE_Error_test_nofeatures = np.empty((K,1))
+
+
+    GE_Error_train = np.empty((K,1))
+    GE_Error_test = np.empty((K,1))
+    GE_Error_train_rlr = np.empty((K,1))
+    GE_Error_test_rlr = np.empty((K,1))
+    GE_Error_train_nofeatures = np.empty((K,1))
+    GE_Error_test_nofeatures = np.empty((K,1))
+    w_rlr = np.empty((M,K))
+    w_noreg = np.empty((M,K))
+    mu = np.empty((K, M-1))
+    sigma = np.empty((K, M-1))
+    lambdas_opt = np.empty((K,1))
+    target = []
+    pred = []
+
+    k=0
+
+    for index in range(len(data_train)):
+
+        X_train = data_train[index]
+        y_train = target_train[index]
+        X_test = data_test[index]
+        y_test = target_test[index]
         
 
-        opt_val_err, opt_lambda, mean_w_vs_lambda, train_err_vs_lambda, test_err_vs_lambda = rlr_validate(X_train, y_train, lambdas, internal_cross_validation)
+        opt_val_err, opt_lambda, mean_w_vs_lambda, train_err_vs_lambda, test_err_vs_lambda = rlr_validate(data_train_outer[index], 
+        target_train_outer[index], data_test_outer[index], target_test_outer[index], lambdas, M)
+
+        lambdas_opt[k] = opt_lambda
 
         mu[k, :] = np.mean(X_train[:, 1:], 0)
         sigma[k, :] = np.std(X_train[:, 1:], 0)
@@ -87,27 +113,125 @@ def linearmodel(X, y, N, M, attributeNames, CV, lambdas):
         XtX = X_train.T @ X_train
         
         # Compute mean squared error without using the input data at all
-        Error_train_nofeatures[k] = np.square(y_train-y_train.mean()).sum(axis=0)/y_train.shape[0]
-        Error_test_nofeatures[k] = np.square(y_test-y_test.mean()).sum(axis=0)/y_test.shape[0]
+        GE_Error_train_nofeatures[k] = np.power(y_train-y_train.mean(), 2).sum(axis=0)/y_train.shape[0]
+        GE_Error_test_nofeatures[k] = np.power(y_test-y_test.mean(), 2).sum(axis=0)/y_test.shape[0]
 
         # Estimate weights for the optimal value of lambda, on entire training set
         lambdaI = opt_lambda * np.eye(M)
         lambdaI[0,0] = 0 # Do no regularize the bias term
         w_rlr[:,k] = np.linalg.solve(XtX+lambdaI,Xty).squeeze()
         # Compute mean squared error with regularization with optimal lambda
-        Error_train_rlr[k] = np.square(y_train-X_train @ w_rlr[:,k]).sum(axis=0)/y_train.shape[0]
-        Error_test_rlr[k] = np.square(y_test-X_test @ w_rlr[:,k]).sum(axis=0)/y_test.shape[0]
+        GE_Error_train_rlr[k] = np.power(y_train-X_train @ w_rlr[:,k], 2).sum(axis=0)/y_train.shape[0]
+        GE_Error_test_rlr[k] = np.power(y_test-X_test @ w_rlr[:,k], 2).sum(axis=0)/y_test.shape[0]
 
         # Estimate weights for unregularized linear regression, on entire training set
         w_noreg[:,k] = np.linalg.solve(XtX,Xty).squeeze()
         # Compute mean squared error without regularization
-        Error_train[k] = np.square(y_train-X_train @ w_noreg[:,k]).sum(axis=0)/y_train.shape[0]
-        Error_test[k] = np.square(y_test-X_test @ w_noreg[:,k]).sum(axis=0)/y_test.shape[0]
+        GE_Error_train[k] = np.power(y_train-X_train @ w_noreg[:,k], 2).sum(axis=0)/y_train.shape[0]
+        GE_Error_test[k] = np.power(y_test-X_test @ w_noreg[:,k], 2).sum(axis=0)/y_test.shape[0]
 
 
+        # Compute mean squared error without using the input data at all
+        MSE_Error_train_nofeatures[k] = np.square(y_train-y_train.mean()).sum(axis=0)/y_train.shape[0]
+        MSE_Error_test_nofeatures[k] = np.square(y_test-y_test.mean()).sum(axis=0)/y_test.shape[0]
+
+        # Compute mean squared error with regularization with optimal lambda
+        MSE_Error_train_rlr[k] = np.square(y_train-X_train @ w_rlr[:,k]).sum(axis=0)/y_train.shape[0]
+        MSE_Error_test_rlr[k] = np.square(y_test-X_test @ w_rlr[:,k]).sum(axis=0)/y_test.shape[0]
+
+        # Estimate weights for unregularized linear regression, on entire training set
+        # Compute mean squared error without regularization
+        MSE_Error_train[k] = np.square(y_train-X_train @ w_noreg[:,k]).sum(axis=0)/y_train.shape[0]
+        MSE_Error_test[k] = np.square(y_test-X_test @ w_noreg[:,k]).sum(axis=0)/y_test.shape[0]
+
+        pred.append(X_test @ w_rlr[:,k]) 
+        target.append(y_test)
+
+        k+=1
+
+
+
+    lr_GE_error = {
+        "GE_Error_train":GE_Error_train,
+        "GE_Error_test":GE_Error_test,
+        "GE_Error_train_rlr":GE_Error_train_rlr,
+        "GE_Error_test_rlr":GE_Error_test_rlr,
+        "GE_Error_train_nofeatures":GE_Error_train_nofeatures,
+        "GE_Error_test_nofeatures":GE_Error_test_nofeatures,
+
+    }
+
+    lr_MSE_error = {
+        "MSE_Error_train":MSE_Error_train,
+        "MSE_Error_test":MSE_Error_test,
+        "MSE_Error_train_rlr":MSE_Error_train_rlr,
+        "MSE_Error_test_rlr":MSE_Error_test_rlr,
+        "MSE_Error_train_nofeatures":MSE_Error_train_nofeatures,
+        "MSE_Error_test_nofeatures":MSE_Error_test_nofeatures,
+
+    }
+
+    lr_cross_val_last = {
+        "opt_val_err":opt_val_err, 
+        "opt_lambda":opt_lambda, 
+        "mean_w_vs_lambda":mean_w_vs_lambda, 
+        "train_err_vs_lambda":train_err_vs_lambda, 
+        "test_err_vs_lambda":test_err_vs_lambda
+    }
+
+    lr_rest = {
+        "w_rlr":w_rlr,
+        "w_noreg":w_noreg,
+        "mu":mu,
+        "sigma":sigma,
+        "lambdas_opt":lambdas_opt,
+        "target":target,
+        "pred":pred,
+    }
+
+    return lr_GE_error, lr_MSE_error, lr_cross_val_last, lr_rest
+
+
+
+K=10
+
+target = "colours"
+
+drop_columns = ["name", "mainhue", "topleft", "botright", "landmass", "zone", "language", "religion", "colours", "red", "green", "blue", "gold", "white", "black", "orange"]
+
+onehot_classes = ["landmass", "zone", "language", "religion"]
+
+data, target, N, M, attributeNames, data_train, target_train, data_test, target_test, data_train_outer, target_train_outer, data_test_outer, target_test_outer = get_data(K, onehot_classes, drop_columns, target)
+
+lambdas = np.power(10.,range(-5,9))
+lr_GE_error, lr_MSE_error, lr_cross_val_last, lr_rest = linearmodel(N, M, attributeNames, lambdas, data_train, target_train, data_test, target_test, data_train_outer, target_train_outer, data_test_outer, target_test_outer, K)
+
+print([round(a,3) for a in lr_rest["lambdas_opt"].squeeze()]) 
+print([round(a,3) for a in lr_GE_error["GE_Error_test_rlr"].squeeze()])
+print(lr_rest["pred"][0])
     
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+"""
 
 
 K = 10
@@ -192,14 +316,14 @@ for train_index, test_index in CV.split(X, y):
 
 plt.show()
 
-"""
+
 print(Error_train)
 print(Error_test)
 print(Error_train_rlr)
 print(Error_test_rlr)
 print(Error_train_nofeatures)
 print(Error_test_nofeatures)
-"""
+
 
 print('Linear regression without feature selection:')
 print('- Training error: {0}'.format(Error_train.mean()))
@@ -215,3 +339,5 @@ print('- R^2 test:     {0}\n'.format((Error_test_nofeatures.sum()-Error_test_rlr
 print('Weights in last fold:')
 for m in range(M):
     print('{:>15} {:>15}'.format(attributeNames[m], np.round(w_rlr[m,-1],2)))
+
+"""
