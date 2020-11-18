@@ -5,6 +5,7 @@ from toolbox_02450 import dbplotf, train_neural_net, visualize_decision_boundary
 import numpy as np
 import sklearn.linear_model as lm
 
+
 # Load Matlab data file and extract variables of interest
 mat_data = loadmat('../Data/synth2.mat')
 X = mat_data['X']

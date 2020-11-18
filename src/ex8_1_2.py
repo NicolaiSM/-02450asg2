@@ -20,6 +20,7 @@ classNames = [name[0][0] for name in mat_data['classNames']]
 N, M = X.shape
 C = len(classNames)
 
+print(mat_data)
 
 # Create crossvalidation partition for evaluation
 # using stratification and 95 pct. split between training and test 
