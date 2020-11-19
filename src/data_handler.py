@@ -125,6 +125,4 @@ print(np.array(target_test_outer, dtype=object))
 print(10*"-")
 """
 
-=======
-    return data, target, N, M, attributeNames, data_train, target_train, data_test, target_test, data_train_outer, target_train_outer, data_test_outer, target_test_outer
->>>>>>> 632cff8412d0bd0e7bbe54b2f87b54718515e5ce
+

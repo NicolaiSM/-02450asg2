@@ -49,7 +49,7 @@ drop_columns = ["name", "mainhue", "topleft", "botright", "landmass", "zone", "l
 onehot_classes = ["landmass", "zone", "language", "religion"]
 
 
-data, target, N, M, attributeNames, data_train, target_train, data_test, target_test, data_train_outer, target_train_outer, data_test_outer, target_test_outer = get_data(K, onehot_classes, drop_columns, target)
+data, target, N, M, attributeNames, classNames, data_train, target_train, data_test, target_test, data_train_outer, target_train_outer, data_test_outer, target_test_outer = get_data(K, onehot_classes, drop_columns, target)
 
 
 lr_GE_error, lr_MSE_error, lr_cross_val_last, lr_rest, baseline_errors, baseline_preds, baseline_y_tests, ann_n_hidden, ann_error, ann_test_predict, ann_test_true, ann_train_loss = cross_validation_func(data, target, N, M, attributeNames, data_train, target_train, data_test, target_test, data_train_outer, target_train_outer, data_test_outer, target_test_outer)
