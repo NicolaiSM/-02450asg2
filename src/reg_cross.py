@@ -4,6 +4,34 @@ from baseline import baseline
 from linearmodel import linearmodel
 import numpy as np
 import matplotlib.pyplot as plt
+import torch
+from ann_reg import MyDataset, Net
+from linearmodel import rlr_validate
+import scipy.stats as st
+import matplotlib.pyplot as plt
+from sklearn import model_selection
+import numpy as np
+from data_handler import get_data
+from sklearn.metrics import mean_squared_error, r2_score
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+import torch.optim as optim
+from data_handler import get_data
+from torch.utils.data import Dataset, DataLoader
+from sklearn.model_selection import train_test_split
+from sklearn import preprocessing
+import matplotlib.pyplot as plt
+from sklearn.metrics import mean_squared_error, r2_score
+import numpy as np
+import numpy as np
+import pandas as pd
+from sklearn import preprocessing, model_selection
+from data_handler import get_data
+from sklearn import model_selection
+import sklearn.linear_model as lm
+import numpy as np
+import matplotlib.pyplot as plt
 
 def cross_validation_func(data, target, N, M, attributeNames, data_train, target_train, data_test, target_test, data_train_outer, target_train_outer, data_test_outer, target_test_outer):
 
@@ -232,7 +260,66 @@ for m in range(M):
 
 
 
+FNN = ANN_trainer()
 
+n_hiddens = [1, 5, 10, 20, 40, 80, 160, 320, 640, 1280, 2560]
+
+best_hidden, error, predict_list, y_test_list, train_loss, test_loss, best_hiddens = FNN.innerrun(M, n_hiddens, data_train, target_train, data_test, target_test)
+
+
+n_hidden = 5
+
+net = Net(M, n_hidden, 1)
+
+optimizer = optim.SGD(net.parameters(), lr=0.001, weight_decay=0.9)
+
+criterion = nn.MSELoss()
+
+
+
+
+
+for index in range(len(data_train)):
+
+
+
+    X_train = data_train[index]
+    y_train = target_train[index]
+    X_test = data_test[index]
+    y_test = target_test[index]
+
+
+
+
+    train_dataset = MyDataset(torch.from_numpy(X_train).float(), torch.from_numpy(y_train).float())
+    test_dataset = MyDataset(torch.from_numpy(X_test).float(), torch.from_numpy(y_test).float())
+
+    train_loader = DataLoader(dataset=train_dataset, batch_size=32, shuffle=True)
+    test_loader = DataLoader(dataset=test_dataset, batch_size=1)
+
+
+
+    one_train_loss_list = FNN.train(train_loader, net, criterion, optimizer)
+
+    one_error, one_pred_list, one_y_test_list = FNN.test(test_loader, net, criterion)
+
+mse = np.square(np.array(one_y_test_list)-np.array(one_pred_list)).sum(axis=0)/np.array(one_y_test_list).shape[0]
+print(mse)
+
+mean_error = sum(one_train_loss_list)/len(one_train_loss_list)
+
+x = range(1, len(one_train_loss_list)+1)
+
+
+plt.plot(x, [mse]*len(one_train_loss_list))
+plt.plot(x, [mean_error]*len(one_train_loss_list))
+plt.plot(x, one_train_loss_list)
+plt.title("Training error every epoch")
+plt.xlabel('Number of Epoch')
+plt.ylabel('MSE')
+plt.xlim(1,len(x))
+plt.legend(["MSE test loss mean", "MSE train loss mean",  "MSE train loss"])
+plt.grid()
 
 
 
