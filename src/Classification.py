@@ -18,7 +18,7 @@ drop_columns = ["name", "mainhue", "topleft", "botright", "landmass", "zone", "l
 
 onehot_classes = ["landmass", "zone", "language"]
 
-X, yDontCare, y, N, M, attributeNames, classNames, CV = get_data(K, onehot_classes, drop_columns)
+X, y, N, M, attributeNames, classNames, data_train, target_train, data_test, target_test, data_train_outer, target_train_outer, data_test_outer, target_test_outer = get_data(K, onehot_classes, drop_columns, "religion")
 
 X = X - (np.ones((N, 1)) * X.mean(axis=0))
 X = X / X.std(axis=0)
@@ -39,11 +39,11 @@ def cross_validation(z):
     k = 0
     best_lambda = []
     best_error = []
-    for train_index, test_index in CV.split(X, y):
-        X_train = X[train_index]
-        y_train = y[train_index]
-        X_test = X[test_index]
-        y_test = y[test_index]
+    for index in range(len(data_train)):
+        X_train = np.array((data_train[index])).astype(int)
+        y_train = np.array((target_train[index])).astype(int)
+        X_test = np.array((data_test[index])).astype(int)
+        y_test = np.array((target_test[index])).astype(int)
         # Exercise 8_1_2
 
         if z == 1:
@@ -103,7 +103,7 @@ def cross_validation(z):
 
         if z == 1:
             yhat1.extend(y_test_estimate)
-            print(yhat1)
+            #print(yhat1)
         if z == 2:
             yhat2.extend(y_test_estimate)
 
@@ -197,11 +197,11 @@ def baseline():
 
     k = 0
     best_error = []
-    for train_index, test_index in CV.split(X, y):
-        X_train = X[train_index]
-        y_train = y[train_index]
-        X_test = X[test_index]
-        y_test = y[test_index]
+    for index in range(len(data_train)):
+        X_train = data_train[index]
+        y_train = target_train[index]
+        X_test = data_test[index]
+        y_test = target_test[index]
 
         y_test_estimate = []
 
@@ -258,9 +258,11 @@ print(out)
 
 y_true = np.array(y_true)
 yhat1 = np.array(yhat1)
-#print(yhat1.shape)
+print(yhat1)
 yhat2 = np.array(yhat2)
+print(yhat2)
 yhat3 = np.array(yhat3)
+print(yhat3)
 
 
 def model_vs_model(model1, model2):

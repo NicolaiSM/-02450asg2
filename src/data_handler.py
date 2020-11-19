@@ -33,7 +33,7 @@ def get_data(K, onehot_classes, drop_columns, target):
     target = preprocessing.scale(target)
 
     attributeNames = df.columns
-    classNames =sorted(set(target2))
+    classNames = sorted(set(target))
 
     CV = model_selection.KFold(n_splits=K,shuffle=True)
 
@@ -82,7 +82,7 @@ def get_data(K, onehot_classes, drop_columns, target):
         data_test_outer.append(n_data_test_outer_list)
         target_test_outer.append(n_target_test_outer_list)
 
-    return data, target, N, M, attributeNames, data_train, target_train, data_test, target_test, data_train_outer, target_train_outer, data_test_outer, target_test_outer
+    return data, target, N, M, attributeNames, classNames, data_train, target_train, data_test, target_test, data_train_outer, target_train_outer, data_test_outer, target_test_outer
 
 
 """
