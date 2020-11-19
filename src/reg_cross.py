@@ -36,16 +36,7 @@ import matplotlib.pyplot as plt
 def cross_validation_func(data, target, N, M, attributeNames, data_train, target_train, data_test, target_test, data_train_outer, target_train_outer, data_test_outer, target_test_outer):
 
 
-    
-    K=10
 
-    target = "colours"
-
-    drop_columns = ["name", "mainhue", "topleft", "botright", "landmass", "zone", "language", "religion", "colours", "red", "green", "blue", "gold", "white", "black", "orange"]
-
-    onehot_classes = ["landmass", "zone", "language", "religion"]
-
-    data, target, N, M, attributeNames, data_train, target_train, data_test, target_test, data_train_outer, target_train_outer, data_test_outer, target_test_outer = get_data(K, onehot_classes, drop_columns, target)
 
     baseline_errors, baseline_preds, baseline_y_tests= baseline(N, M, attributeNames, data_train, target_train, data_test, target_test, data_train_outer, target_train_outer, data_test_outer, target_test_outer)
 
@@ -242,7 +233,7 @@ plt.ylabel('Generalisation error')
 plt.xlim(1,len(x))
 plt.legend(legend)
 plt.grid()
-
+plt.show()
 
 
 attributeNames2= ['area', 'population', 'bars', 'stripes', 'circles', 'crosses',
@@ -320,7 +311,7 @@ plt.ylabel('MSE')
 plt.xlim(1,len(x))
 plt.legend(["MSE test loss mean", "MSE train loss mean",  "MSE train loss"])
 plt.grid()
-
+plt.show()
 
 
 
