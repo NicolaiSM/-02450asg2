@@ -58,9 +58,10 @@ class ANN_trainer:
 
             self.train_loss = []
 
+
     def train(self, train_loader, net, criterion, optimizer):
 
-        #train_loss = []
+        train_loss_list = []
 
         for e in range(self.EPOCHS):
 
@@ -78,12 +79,12 @@ class ANN_trainer:
 
                 epoch_loss += train_loss.item()
             
-            #train_loss.append(epoch_loss.numpy()/len(train_loader))
+            train_loss_list.append(epoch_loss/len(train_loader))
         
-        #return train_loss
+        return train_loss_list
         
 
-    def test(self, test_loader, net):
+    def test(self, test_loader, net, criterion):
         pred_list = []
         y_test_list = []
 
@@ -93,6 +94,7 @@ class ANN_trainer:
                 pred_list.append(pred)
                 y_test_list.append(y_test.numpy()[0])
 
+
         return np.power(np.array(pred_list)-np.array(y_test_list),2).sum().astype(float)/np.array(y_test_list).shape[0], pred_list, y_test_list
 
 
@@ -100,6 +102,14 @@ class ANN_trainer:
 
         best_hidden = 0
         error = None
+
+        predict_list = []
+        y_test_list = []
+
+        train_loss = []
+        test_loss = []
+        best_hiddens = []
+
 
         for index in range(len(data_train_outer)):
 
@@ -121,6 +131,17 @@ class ANN_trainer:
 
                 for n_hidden in n_hiddens:
 
+                    best_hidden_1 = 0
+
+                    error_1 = None
+
+                    predict_best = []
+
+                    y_test_best = []
+
+                    train_loss_best = []
+                    test_loss_best = []
+
                     for i in range(5):
 
                         net = Net(M, n_hidden, 1)
@@ -129,15 +150,31 @@ class ANN_trainer:
 
                         criterion = nn.MSELoss()
 
-                        self.train(train_loader, net, criterion, optimizer)
+                        train_loss = self.train(train_loader, net, criterion, optimizer)
 
-                        n_error, _, _ = self.test(test_loader, net) 
+                        n_error, n_predict_list, n_y_test_list = self.test(test_loader, net, optimizer) 
 
-                        if error == None or (n_error< error):
-                            error = n_error
-                            best_hidden = n_hidden
+                        if error_1 == None or (n_error< error_1):
+                            error_1 = n_error
+                            best_hidden_1 = n_hidden
+                            predict_list=predict_best
+                            y_test_list=y_test_best
+                            train_loss_best = train_loss
+                            test_loss_best = n_error                           
+
+
+
+                    if error == None or (error_1< error):
+                          error = error_1
+                          best_hidden = best_hidden_1
+
+                    predict_list.append(predict_best)
+                    y_test_list.append(y_test_best)
+                    train_loss.append(train_loss_best)
+                    test_loss.append(train_loss_best)
+                    best_hiddens.append(best_hidden_1)
         
-        return best_hidden, error
+        return best_hidden, error, predict_list, y_test_list, train_loss, test_loss, best_hiddens
 
 
     def run(self, N, M, attributeNames, n_hiddens, data_train, target_train, data_test, target_test, data_train_outer, target_train_outer, data_test_outer, target_test_outer):
@@ -156,7 +193,7 @@ class ANN_trainer:
             train_loader_outer = DataLoader(dataset=train_dataset_outer, batch_size=self.BATCH_SIZE, shuffle=True)
             test_loader_outer = DataLoader(dataset=test_dataset_outer, batch_size=1)
 
-            best_n_hidden, _ = self.innerrun(M, n_hiddens, data_train_outer[index], target_train_outer[index], data_test_outer[index], target_test_outer[index])
+            best_n_hidden, _, _, _, _, _, _ = self.innerrun(M, n_hiddens, data_train_outer[index], target_train_outer[index], data_test_outer[index], target_test_outer[index])
 
 
             error = None
@@ -174,7 +211,7 @@ class ANN_trainer:
 
                 n_train_loss = self.train(train_loader_outer, net, criterion, optimizer)
 
-                n_error, n_pred, n_true = self.test(test_loader_outer, net)
+                n_error, n_pred, n_true = self.test(test_loader_outer, net, criterion)
 
 
                 
@@ -191,143 +228,5 @@ class ANN_trainer:
             self.error.append(error)
             self.train_loss.append(train_loss)
 
+            print("-----------------ANN_run" +str(index)+ "-----------------")
 
-"""
-                
-K=10
-
-target = "colours"
-
-drop_columns = ["name", "mainhue", "topleft", "botright", "landmass", "zone", "language", "religion", "colours", "red", "green", "blue", "gold", "white", "black", "orange"]
-
-onehot_classes = ["landmass", "zone", "language", "religion"]
-
-data, target, N, M, attributeNames, data_train, target_train, data_test, target_test, data_train_outer, target_train_outer, data_test_outer, target_test_outer = get_data(K, onehot_classes, drop_columns, target)
-
-n_hiddens = [1, 5, 10, 20, 40, 80, 160, 320, 640, 1280, 2560]
-ann = ANN_trainer()
-
-ann.run( N, M, attributeNames, n_hiddens, data_train, target_train, data_test, target_test, data_train_outer, target_train_outer, data_test_outer, target_test_outer)
-
-print(ann.n_hidden)
-print(ann.error)
-
-"""
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-        
-
-
-
-
-
-
-
-
-
-"""
-
-def train(train_loader):
-
-    data, target, n_observation, n_features, attributeNames = get_data()
-
-    X_train, X_test, y_train, y_test = train_test_split(data, target, test_size=0.2, random_state=69)
-
-    train_dataset = RegressionDataset(torch.from_numpy(X_train).float(), torch.from_numpy(y_train).float())
-    test_dataset = RegressionDataset(torch.from_numpy(X_test).float(), torch.from_numpy(y_test).float())
-
-    EPOCHS = 150
-    BATCH_SIZE = 64
-    LEARNING_RATE = 0.001
-    NUM_FEATURES = n_features
-
-
-    train_loader = DataLoader(dataset=train_dataset, batch_size=BATCH_SIZE, shuffle=True)
-    test_loader = DataLoader(dataset=test_dataset, batch_size=1)
-
-
-
-    net = Net(n_features, n_features, 1)
-
-    optimizer = optim.SGD(net.parameters(), lr=LEARNING_RATE, weight_decay=0.9)
-
-    criterion = nn.MSELoss()
-
-    test_loss = []
-
-    for e in range(EPOCHS):
-
-        epoch_loss = 0
-
-        for X_train_batch, y_train_batch in train_loader:
-            
-            pred = net(X_train_batch)
-
-            train_loss = criterion(pred, y_train_batch.unsqueeze(1)) 
-
-            train_loss.backward()
-
-            optimizer.step()
-
-            epoch_loss += train_loss.item()
-        
-        test_loss.append(epoch_loss/len(train_loader))
-
-    plt.plot(list(range(EPOCHS)), test_loss)
-    plt.show()
-
-def test(test_loader):
-    pred_list = []
-    y_test_list = []
-    x_test = []
-    with torch.no_grad():
-        for X_test_batch, y_test in test_loader:
-            pred = net(X_test_batch).numpy()
-            pred_list.append(pred)
-            y_test_list.append(y_test.numpy())
-            x_test.append(X_test_batch.numpy())
-
-
-
-    y_pred_list = [a.squeeze().tolist() for a in pred_list]
-    x_test = [a.squeeze().tolist() for a in x_test]
-    #y_test_list = [a.squeeze().tolist() for a in y_test_list]
-
-    mse = mean_squared_error(y_test_list, y_pred_list)
-    r_square = r2_score(y_test_list, y_pred_list)
-
-    print(mse)
-    print(np.sqrt(mse))
-    print(r_square)
-
-
-
-
-train(train_loader)
-test(test_loader)
-
-
-
-"""

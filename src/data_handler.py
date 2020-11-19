@@ -8,7 +8,7 @@ from sklearn import preprocessing, model_selection
 
 def get_data(K, onehot_classes, drop_columns, target):
 
-    filename = '../data/flag_data'
+    filename = '/content/flag_data'
     df = pd.read_csv(filename, 
                     sep=",",
                     names=["name", "landmass", "zone", "area", "population", "language", "religion", "bars", "stripes", "colours", "red", "green", "blue", "gold", "white", "black", "orange", "mainhue", "circles", "crosses", "saltires", "quarters", "sunstars", "crescent", "triangle", "icon", "animate", "text", "topleft", "botright"],
@@ -20,7 +20,6 @@ def get_data(K, onehot_classes, drop_columns, target):
         df = df.merge(onehotdf, left_index=True, right_index=True)
 
     data = df.drop(columns=drop_columns)
-    #print(data.columns)
 
     data = data.values
     target = df[target].values
@@ -33,6 +32,7 @@ def get_data(K, onehot_classes, drop_columns, target):
     target = preprocessing.scale(target)
 
     attributeNames = df.columns
+
     classNames = sorted(set(target))
 
     CV = model_selection.KFold(n_splits=K,shuffle=True)
@@ -82,6 +82,7 @@ def get_data(K, onehot_classes, drop_columns, target):
         data_test_outer.append(n_data_test_outer_list)
         target_test_outer.append(n_target_test_outer_list)
 
+
     return data, target, N, M, attributeNames, classNames, data_train, target_train, data_test, target_test, data_train_outer, target_train_outer, data_test_outer, target_test_outer
 
 
@@ -124,3 +125,6 @@ print(np.array(target_test_outer, dtype=object))
 print(10*"-")
 """
 
+=======
+    return data, target, N, M, attributeNames, data_train, target_train, data_test, target_test, data_train_outer, target_train_outer, data_test_outer, target_test_outer
+>>>>>>> 632cff8412d0bd0e7bbe54b2f87b54718515e5ce
