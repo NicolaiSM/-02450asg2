@@ -8,7 +8,7 @@ from sklearn import preprocessing, model_selection
 
 def get_data(K, onehot_classes, drop_columns, target):
 
-    filename = '/content/flag_data'
+    filename = '../data/flag_data'
     df = pd.read_csv(filename, 
                     sep=",",
                     names=["name", "landmass", "zone", "area", "population", "language", "religion", "bars", "stripes", "colours", "red", "green", "blue", "gold", "white", "black", "orange", "mainhue", "circles", "crosses", "saltires", "quarters", "sunstars", "crescent", "triangle", "icon", "animate", "text", "topleft", "botright"],
